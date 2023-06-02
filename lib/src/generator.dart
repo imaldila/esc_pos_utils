@@ -454,11 +454,7 @@ class Generator {
     return bytes;
   }
 
-  /// Print a row.
-  ///
-  /// A row contains up to 12 columns. A column has a width between 1 and 12.
-  /// Total width of columns in one row must be equal 12.
-  List<int> oldRow(List<PosColumn> cols) {
+  List<int> row(List<PosColumn> cols) {
     List<int> bytes = [];
     final isSumValid = cols.fold(0, (int sum, col) => sum + col.width) == 12;
     if (!isSumValid) {
@@ -588,7 +584,7 @@ class Generator {
   ///
   /// A row contains up to 12 columns. A column has a width between 1 and 12.
   /// Total width of columns in one row must be equal 12.
-  List<int> row(List<PosColumn> cols) {
+  List<int> oldRow(List<PosColumn> cols) {
     List<int> bytes = [];
     final isSumValid = cols.fold(0, (int sum, col) => sum + col.width) == 12;
     if (!isSumValid) {
