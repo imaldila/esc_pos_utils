@@ -7,7 +7,7 @@
  */
 
 import 'dart:typed_data' show Uint8List;
-
+import 'package:image/image.dart';
 import 'pos_styles.dart';
 
 /// Column contains text, styles and width (an integer in 1..12 range)
@@ -23,15 +23,12 @@ class PosColumn {
     if (width < 1 || width > 12) {
       throw Exception('Column width must be between 1..12');
     }
-    if (text != null &&
-        text.length > 0 &&
-        textEncoded != null &&
-        textEncoded!.length > 0) {
+    if (text.length > 0 && textEncoded != null && textEncoded!.length > 0) {
       throw Exception(
           'Only one parameter - text or textEncoded - should be passed');
     }
   }
-
+  Image? img;
   String text;
   Uint8List? textEncoded;
   bool containsChinese;
