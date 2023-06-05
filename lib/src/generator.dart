@@ -454,115 +454,115 @@ class Generator {
     return bytes;
   }
 
-  List<int> row(List<PosColumn> cols) {
-    List<int> bytes = [];
-    final isSumValid = cols.fold(0, (int sum, col) => sum + col.width) == 12;
-    if (!isSumValid) {
-      throw Exception('Total columns width must be equal to 12');
-    }
-    bool isNextRow = false;
-    List<PosColumn> nextRow = <PosColumn>[];
+  // List<int> row(List<PosColumn> cols) {
+  //   List<int> bytes = [];
+  //   final isSumValid = cols.fold(0, (int sum, col) => sum + col.width) == 12;
+  //   if (!isSumValid) {
+  //     throw Exception('Total columns width must be equal to 12');
+  //   }
+  //   bool isNextRow = false;
+  //   List<PosColumn> nextRow = <PosColumn>[];
 
-    for (int i = 0; i < cols.length; ++i) {
-      int colInd =
-          cols.sublist(0, i).fold(0, (int sum, col) => sum + col.width);
-      // print(' ---------- colInd $colInd col.width ${cols[0].width}');
-      double charWidth = _getCharWidth(cols[i].styles);
-      double fromPos = _colIndToPosition(colInd);
-      double toPos =
-          _colIndToPosition(colInd + cols[i].width) - spaceBetweenRows;
-      int maxCharactersNb = ((toPos - fromPos) / charWidth).floor();
-      var containsChinese = cols[i].containsChinese;
-      if (!containsChinese) {
-        // CASE 1: containsChinese = false
-        Uint8List encodedToPrint = cols[i].textEncoded != null
-            ? cols[i].textEncoded!
-            : _encode(cols[i].text);
+  //   for (int i = 0; i < cols.length; ++i) {
+  //     int colInd =
+  //         cols.sublist(0, i).fold(0, (int sum, col) => sum + col.width);
+  //     // print(' ---------- colInd $colInd col.width ${cols[0].width}');
+  //     double charWidth = _getCharWidth(cols[i].styles);
+  //     double fromPos = _colIndToPosition(colInd);
+  //     double toPos =
+  //         _colIndToPosition(colInd + cols[i].width) - spaceBetweenRows;
+  //     int maxCharactersNb = ((toPos - fromPos) / charWidth).floor();
+  //     var containsChinese = cols[i].containsChinese;
+  //     if (!containsChinese) {
+  //       // CASE 1: containsChinese = false
+  //       Uint8List encodedToPrint = cols[i].textEncoded != null
+  //           ? cols[i].textEncoded!
+  //           : _encode(cols[i].text);
 
-        // If the col's content is too long, split it to the next row
-        int realCharactersNb = encodedToPrint.length;
-        if (realCharactersNb > maxCharactersNb) {
-          // Print max possible and split to the next row
-          Uint8List encodedToPrintNextRow = realCharactersNb < maxCharactersNb
-              ? encodedToPrint
-              : encodedToPrint.sublist(maxCharactersNb);
-          encodedToPrint = realCharactersNb < maxCharactersNb
-              ? encodedToPrint
-              : encodedToPrint.sublist(0, maxCharactersNb);
-          isNextRow = realCharactersNb < maxCharactersNb ? false : true;
+  //       // If the col's content is too long, split it to the next row
+  //       int realCharactersNb = encodedToPrint.length;
+  //       if (realCharactersNb > maxCharactersNb) {
+  //         // Print max possible and split to the next row
+  //         Uint8List encodedToPrintNextRow = realCharactersNb < maxCharactersNb
+  //             ? encodedToPrint
+  //             : encodedToPrint.sublist(maxCharactersNb);
+  //         encodedToPrint = realCharactersNb < maxCharactersNb
+  //             ? encodedToPrint
+  //             : encodedToPrint.sublist(0, maxCharactersNb);
+  //         isNextRow = realCharactersNb < maxCharactersNb ? false : true;
 
-          if (isNextRow) {
-            nextRow.add(PosColumn(
-                text: String.fromCharCodes(encodedToPrintNextRow).trim(),
-                width: cols[i].width,
-                styles: cols[i].styles));
-          } else {
-            nextRow.add(PosColumn(
-                text: '', width: cols[i].width, styles: cols[i].styles));
-          }
+  //         if (isNextRow) {
+  //           nextRow.add(PosColumn(
+  //               text: String.fromCharCodes(encodedToPrintNextRow).trim(),
+  //               width: cols[i].width,
+  //               styles: cols[i].styles));
+  //         } else {
+  //           nextRow.add(PosColumn(
+  //               text: '', width: cols[i].width, styles: cols[i].styles));
+  //         }
 
-          // end rows splitting
-          bytes += _text(
-            encodedToPrint,
-            styles: cols[i].styles,
-            colInd: colInd,
-            colWidth: cols[i].width,
-            // maxCharsPerLine: maxCharactersNb,
-          );
-          isNextRow = true;
-        } else {
-          bytes += _text(
-            _encode(cols[i].text),
-            styles: cols[i].styles,
-            colInd: colInd,
-            colWidth: cols[i].width,
-            // maxCharsPerLine: maxCharactersNb,
-          );
-          // Insert an empty col
-          nextRow.add(PosColumn(
-              text: '', width: cols[i].width, styles: cols[i].styles));
-        }
-      } else {
-        // CASE 1: containsChinese = true
-        var originalText = cols[i].text;
-        var splitPos = _spltChineseCharacters(maxCharactersNb, originalText);
+  //         // end rows splitting
+  //         bytes += _text(
+  //           encodedToPrint,
+  //           styles: cols[i].styles,
+  //           colInd: colInd,
+  //           colWidth: cols[i].width,
+  //           // maxCharsPerLine: maxCharactersNb,
+  //         );
+  //         isNextRow = true;
+  //       } else {
+  //         bytes += _text(
+  //           _encode(cols[i].text),
+  //           styles: cols[i].styles,
+  //           colInd: colInd,
+  //           colWidth: cols[i].width,
+  //           // maxCharsPerLine: maxCharactersNb,
+  //         );
+  //         // Insert an empty col
+  //         nextRow.add(PosColumn(
+  //             text: '', width: cols[i].width, styles: cols[i].styles));
+  //       }
+  //     } else {
+  //       // CASE 1: containsChinese = true
+  //       var originalText = cols[i].text;
+  //       var splitPos = _spltChineseCharacters(maxCharactersNb, originalText);
 
-        String toPrint = originalText.substring(0, splitPos);
-        String toPrintNextRow = originalText.substring(splitPos);
-        //  '豚肉・木耳と玉子炒め弁当'
-        if (toPrintNextRow.isNotEmpty) {
-          isNextRow = true;
-          nextRow.add(PosColumn(
-              text: toPrintNextRow,
-              containsChinese: true,
-              width: cols[i].width,
-              styles: cols[i].styles));
-        } else {
-          // Insert an empty col
-          nextRow.add(PosColumn(
-              text: '', width: cols[i].width, styles: cols[i].styles));
-        }
-        if (toPrint.isNotEmpty) {
-          // Print current row
-          bytes += _text(
-            _encode(toPrint, isKanji: true),
-            styles: cols[i].styles,
-            colInd: colInd,
-            colWidth: cols[i].width,
-            isKanji: true,
-          );
-        }
-      }
-    }
+  //       String toPrint = originalText.substring(0, splitPos);
+  //       String toPrintNextRow = originalText.substring(splitPos);
+  //       //  '豚肉・木耳と玉子炒め弁当'
+  //       if (toPrintNextRow.isNotEmpty) {
+  //         isNextRow = true;
+  //         nextRow.add(PosColumn(
+  //             text: toPrintNextRow,
+  //             containsChinese: true,
+  //             width: cols[i].width,
+  //             styles: cols[i].styles));
+  //       } else {
+  //         // Insert an empty col
+  //         nextRow.add(PosColumn(
+  //             text: '', width: cols[i].width, styles: cols[i].styles));
+  //       }
+  //       if (toPrint.isNotEmpty) {
+  //         // Print current row
+  //         bytes += _text(
+  //           _encode(toPrint, isKanji: true),
+  //           styles: cols[i].styles,
+  //           colInd: colInd,
+  //           colWidth: cols[i].width,
+  //           isKanji: true,
+  //         );
+  //       }
+  //     }
+  //   }
 
-    bytes += emptyLines(1);
+  //   bytes += emptyLines(1);
 
-    if (isNextRow) {
-      bytes += row(nextRow);
-    }
+  //   if (isNextRow) {
+  //     bytes += row(nextRow);
+  //   }
 
-    return bytes;
-  }
+  //   return bytes;
+  // }
 
   int _spltChineseCharacters(int maxCharactersNb, String text) {
     // Split text into multiple lines if it too long
@@ -584,7 +584,7 @@ class Generator {
   ///
   /// A row contains up to 12 columns. A column has a width between 1 and 12.
   /// Total width of columns in one row must be equal 12.
-  List<int> oldRow(List<PosColumn> cols) {
+  List<int> row(List<PosColumn> cols) {
     List<int> bytes = [];
     final isSumValid = cols.fold(0, (int sum, col) => sum + col.width) == 12;
     if (!isSumValid) {
