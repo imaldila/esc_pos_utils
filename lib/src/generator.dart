@@ -615,32 +615,28 @@ class Generator {
           Uint8List encodedToPrintNextRow =
               encodedToPrint.sublist(maxCharactersNb);
           encodedToPrint = encodedToPrint.sublist(0, maxCharactersNb);
-          isNextRow = true;
+          isNextRow = realCharactersNb < maxCharactersNb ? false : true;
           if (isNextRow) {
             nextRow.add(PosColumn(
-                textEncoded: encodedToPrintNextRow,
+                text: String.fromCharCodes(encodedToPrintNextRow).trim(),
                 width: cols[i].width,
                 styles: cols[i].styles));
+          } else {
+            nextRow.add(PosColumn(
+                text: '', width: cols[i].width, styles: cols[i].styles));
           }
-
-          // end rows splitting
-          bytes += _text(
-            encodedToPrint,
-            styles: cols[i].styles,
-            colInd: colInd,
-            colWidth: cols[i].width,
-          );
         } else {
-          bytes += _text(
-            encodedToPrint,
-            styles: cols[i].styles,
-            colInd: colInd,
-            colWidth: cols[i].width,
-          );
           // Insert an empty col
           nextRow.add(PosColumn(
               text: '', width: cols[i].width, styles: cols[i].styles));
         }
+        // end rows splitting
+        bytes += _text(
+          encodedToPrint,
+          styles: cols[i].styles,
+          colInd: colInd,
+          colWidth: cols[i].width,
+        );
       } else {
         // CASE 1: containsChinese = true
         // Split text into multiple lines if it too long
