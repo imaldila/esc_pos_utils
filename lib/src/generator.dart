@@ -616,6 +616,7 @@ class Generator {
               encodedToPrint.sublist(maxCharactersNb);
           encodedToPrint = encodedToPrint.sublist(0, maxCharactersNb);
           isNextRow = realCharactersNb < maxCharactersNb ? false : true;
+
           if (isNextRow) {
             nextRow.add(PosColumn(
                 text: String.fromCharCodes(encodedToPrintNextRow).trim(),
@@ -625,10 +626,16 @@ class Generator {
             nextRow.add(PosColumn(
                 text: '', width: cols[i].width, styles: cols[i].styles));
           }
+
+          print('PRINT ON FIRST THIS');
         } else {
           // Insert an empty col
+          print('PRINT ON THIS');
           nextRow.add(PosColumn(
-              text: '', width: cols[i].width, styles: cols[i].styles));
+            text: '',
+            width: cols[i].width,
+            styles: cols[i].styles,
+          ));
         }
         // end rows splitting
         bytes += _text(
@@ -637,6 +644,10 @@ class Generator {
           colInd: colInd,
           colWidth: cols[i].width,
         );
+        // if (cols[i].img != null)
+        //   bytes += image(
+        //     cols[i].img!,
+        //   );
       } else {
         // CASE 1: containsChinese = true
         // Split text into multiple lines if it too long
