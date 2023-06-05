@@ -616,10 +616,12 @@ class Generator {
               encodedToPrint.sublist(maxCharactersNb);
           encodedToPrint = encodedToPrint.sublist(0, maxCharactersNb);
           isNextRow = true;
-          nextRow.add(PosColumn(
-              textEncoded: encodedToPrintNextRow,
-              width: cols[i].width,
-              styles: cols[i].styles));
+          if (isNextRow) {
+            nextRow.add(PosColumn(
+                textEncoded: encodedToPrintNextRow,
+                width: cols[i].width,
+                styles: cols[i].styles));
+          }
         } else {
           // Insert an empty col
           nextRow.add(PosColumn(
