@@ -349,6 +349,8 @@ class Generator {
   }) {
     List<int> bytes = [];
     if (!containsChinese) {
+      bytes += setStyles(PosStyles().copyWith(align: styles.align));
+
       bytes += _text(
         _encode(text, isKanji: containsChinese),
         styles: styles,
