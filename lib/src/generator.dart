@@ -622,18 +622,25 @@ class Generator {
                 width: cols[i].width,
                 styles: cols[i].styles));
           }
+
+          // end rows splitting
+          bytes += _text(
+            encodedToPrint,
+            styles: cols[i].styles,
+            colInd: colInd,
+            colWidth: cols[i].width,
+          );
         } else {
+          bytes += _text(
+            encodedToPrint,
+            styles: cols[i].styles,
+            colInd: colInd,
+            colWidth: cols[i].width,
+          );
           // Insert an empty col
           nextRow.add(PosColumn(
               text: '', width: cols[i].width, styles: cols[i].styles));
         }
-        // end rows splitting
-        bytes += _text(
-          encodedToPrint,
-          styles: cols[i].styles,
-          colInd: colInd,
-          colWidth: cols[i].width,
-        );
       } else {
         // CASE 1: containsChinese = true
         // Split text into multiple lines if it too long
