@@ -349,6 +349,7 @@ class Generator {
   }) {
     List<int> bytes = [];
     if (!containsChinese) {
+      bytes += setStyles(PosStyles().copyWith(align: styles.align));
       bytes += _text(
         _encode(text, isKanji: containsChinese),
         styles: styles,
@@ -911,6 +912,7 @@ class Generator {
   }) {
     List<int> bytes = [];
     if (colInd != null) {
+      bytes += setStyles(PosStyles().copyWith(align: styles.align));
       double charWidth =
           _getCharWidth(styles, maxCharsPerLine: maxCharsPerLine);
       double fromPos = _colIndToPosition(colInd);
