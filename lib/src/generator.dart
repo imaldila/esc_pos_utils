@@ -628,11 +628,8 @@ class Generator {
             nextRow.add(PosColumn(
                 text: '', width: cols[i].width, styles: cols[i].styles));
           }
-
-          print('PRINT ON FIRST THIS');
         } else {
           // Insert an empty col
-          print('PRINT ON THIS');
           nextRow.add(PosColumn(
             text: '',
             width: cols[i].width,
