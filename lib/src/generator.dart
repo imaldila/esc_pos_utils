@@ -146,7 +146,8 @@ class Generator {
     final biggerImage = im.copyResize(image, width: widthPx, height: heightPx);
     im.fill(biggerImage, color: im.ColorRgb8(0, 0, 0));
     // Insert source image into bigger one
-    im.compositeImage(biggerImage, image, dstX: 0, dstY: 0);
+    // im.compositeImage(biggerImage, image, dstX: 0, dstY: 0);
+    drawImage(biggerImage, image, dstX: 0, dstY: 0);
 
     int left = 0;
     final List<List<int>> blobs = [];
@@ -154,12 +155,68 @@ class Generator {
     while (left < widthPx) {
       final im.Image slice = im.copyCrop(biggerImage,
           x: left, y: 0, width: lineHeight, height: heightPx);
-      final Uint8List bytes = slice.getBytes(order: im.ChannelOrder.grayAlpha);
+      im.grayscale(slice);
+      final imgBinary = slice.convert(numChannels: 1);
+      final bytes = imgBinary.getBytes();
       blobs.add(bytes);
       left += lineHeight;
     }
 
     return blobs;
+  }
+
+  /// Draw the image [src] onto the image [dst].
+  ///
+  /// In other words, drawImage will take an rectangular area from src of
+  /// width [src_w] and height [src_h] at position ([src_x],[src_y]) and place it
+  /// in a rectangular area of [dst] of width [dst_w] and height [dst_h] at
+  /// position ([dst_x],[dst_y]).
+  ///
+  /// If the source and destination coordinates and width and heights differ,
+  /// appropriate stretching or shrinking of the image fragment will be performed.
+  /// The coordinates refer to the upper left corner. This function can be used to
+  /// copy regions within the same image (if [dst] is the same as [src])
+  /// but if the regions overlap the results will be unpredictable.
+  im.Image drawImage(im.Image dst, im.Image src,
+      {int? dstX,
+      int? dstY,
+      int? dstW,
+      int? dstH,
+      int? srcX,
+      int? srcY,
+      int? srcW,
+      int? srcH,
+      bool blend = true}) {
+    dstX ??= 0;
+    dstY ??= 0;
+    srcX ??= 0;
+    srcY ??= 0;
+    srcW ??= src.width;
+    srcH ??= src.height;
+    dstW ??= (dst.width < src.width) ? dstW = dst.width : src.width;
+    dstH ??= (dst.height < src.height) ? dst.height : src.height;
+
+    if (blend) {
+      for (var y = 0; y < dstH; ++y) {
+        for (var x = 0; x < dstW; ++x) {
+          final stepX = (x * (srcW / dstW)).toInt();
+          final stepY = (y * (srcH / dstH)).toInt();
+          final srcPixel = src.getPixel(srcX + stepX, srcY + stepY);
+          im.drawPixel(dst, dstX + x, dstY + y, srcPixel);
+        }
+      }
+    } else {
+      for (var y = 0; y < dstH; ++y) {
+        for (var x = 0; x < dstW; ++x) {
+          final stepX = (x * (srcW / dstW)).toInt();
+          final stepY = (y * (srcH / dstH)).toInt();
+          final srcPixel = src.getPixel(srcX + stepX, srcY + stepY);
+          dst.setPixel(dstX + x, dstY + y, srcPixel);
+        }
+      }
+    }
+
+    return dst;
   }
 
   /// Image rasterization
@@ -455,132 +512,6 @@ class Generator {
     );
     return bytes;
   }
-
-  // List<int> row(List<PosColumn> cols) {
-  //   List<int> bytes = [];
-  //   final isSumValid = cols.fold(0, (int sum, col) => sum + col.width) == 12;
-  //   if (!isSumValid) {
-  //     throw Exception('Total columns width must be equal to 12');
-  //   }
-  //   bool isNextRow = false;
-  //   List<PosColumn> nextRow = <PosColumn>[];
-
-  //   for (int i = 0; i < cols.length; ++i) {
-  //     int colInd =
-  //         cols.sublist(0, i).fold(0, (int sum, col) => sum + col.width);
-  //     // print(' ---------- colInd $colInd col.width ${cols[0].width}');
-  //     double charWidth = _getCharWidth(cols[i].styles);
-  //     double fromPos = _colIndToPosition(colInd);
-  //     double toPos =
-  //         _colIndToPosition(colInd + cols[i].width) - spaceBetweenRows;
-  //     int maxCharactersNb = ((toPos - fromPos) / charWidth).floor();
-  //     var containsChinese = cols[i].containsChinese;
-  //     if (!containsChinese) {
-  //       // CASE 1: containsChinese = false
-  //       Uint8List encodedToPrint = cols[i].textEncoded != null
-  //           ? cols[i].textEncoded!
-  //           : _encode(cols[i].text);
-
-  //       // If the col's content is too long, split it to the next row
-  //       int realCharactersNb = encodedToPrint.length;
-  //       if (realCharactersNb > maxCharactersNb) {
-  //         // Print max possible and split to the next row
-  //         Uint8List encodedToPrintNextRow = realCharactersNb < maxCharactersNb
-  //             ? encodedToPrint
-  //             : encodedToPrint.sublist(maxCharactersNb);
-  //         encodedToPrint = realCharactersNb < maxCharactersNb
-  //             ? encodedToPrint
-  //             : encodedToPrint.sublist(0, maxCharactersNb);
-  //         isNextRow = realCharactersNb < maxCharactersNb ? false : true;
-
-  //         if (isNextRow) {
-  //           nextRow.add(PosColumn(
-  //               text: String.fromCharCodes(encodedToPrintNextRow).trim(),
-  //               width: cols[i].width,
-  //               styles: cols[i].styles));
-  //         } else {
-  //           nextRow.add(PosColumn(
-  //               text: '', width: cols[i].width, styles: cols[i].styles));
-  //         }
-
-  //         // end rows splitting
-  //         bytes += _text(
-  //           encodedToPrint,
-  //           styles: cols[i].styles,
-  //           colInd: colInd,
-  //           colWidth: cols[i].width,
-  //           // maxCharsPerLine: maxCharactersNb,
-  //         );
-  //         isNextRow = true;
-  //       } else {
-  //         bytes += _text(
-  //           _encode(cols[i].text),
-  //           styles: cols[i].styles,
-  //           colInd: colInd,
-  //           colWidth: cols[i].width,
-  //           // maxCharsPerLine: maxCharactersNb,
-  //         );
-  //         // Insert an empty col
-  //         nextRow.add(PosColumn(
-  //             text: '', width: cols[i].width, styles: cols[i].styles));
-  //       }
-  //     } else {
-  //       // CASE 1: containsChinese = true
-  //       var originalText = cols[i].text;
-  //       var splitPos = _spltChineseCharacters(maxCharactersNb, originalText);
-
-  //       String toPrint = originalText.substring(0, splitPos);
-  //       String toPrintNextRow = originalText.substring(splitPos);
-  //       //  '豚肉・木耳と玉子炒め弁当'
-  //       if (toPrintNextRow.isNotEmpty) {
-  //         isNextRow = true;
-  //         nextRow.add(PosColumn(
-  //             text: toPrintNextRow,
-  //             containsChinese: true,
-  //             width: cols[i].width,
-  //             styles: cols[i].styles));
-  //       } else {
-  //         // Insert an empty col
-  //         nextRow.add(PosColumn(
-  //             text: '', width: cols[i].width, styles: cols[i].styles));
-  //       }
-  //       if (toPrint.isNotEmpty) {
-  //         // Print current row
-  //         bytes += _text(
-  //           _encode(toPrint, isKanji: true),
-  //           styles: cols[i].styles,
-  //           colInd: colInd,
-  //           colWidth: cols[i].width,
-  //           isKanji: true,
-  //         );
-  //       }
-  //     }
-  //   }
-
-  //   bytes += emptyLines(1);
-
-  //   if (isNextRow) {
-  //     bytes += row(nextRow);
-  //   }
-
-  //   return bytes;
-  // }
-
-  // int _spltChineseCharacters(int maxCharactersNb, String text) {
-  //   // Split text into multiple lines if it too long
-  //   int counter = 0;
-  //   int splitPos = 0;
-  //   for (int p = 0; p < text.length; ++p) {
-  //     final int w = _isChinese(text[p]) ? 2 : 1;
-  //     if (counter + w >= maxCharactersNb) {
-  //       break;
-  //     }
-  //     counter += w;
-  //     splitPos += 1;
-  //   }
-
-  //   return splitPos;
-  // }
 
   /// Print a row.
   ///
