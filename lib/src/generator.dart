@@ -9,7 +9,7 @@
 import 'dart:convert';
 import 'dart:typed_data' show Uint8List;
 import 'package:hex/hex.dart';
-import 'package:image/image.dart';
+import 'package:image/image.dart' as im;
 import 'package:gbk_codec/gbk_codec.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'commands.dart';
@@ -135,25 +135,26 @@ class Generator {
   ///
   /// [image] Image to extract from
   /// [lineHeight] Printed line height in dots
-  List<List<int>> _toColumnFormat(Image imgSrc, int lineHeight) {
-    final Image image = Image.from(imgSrc); // make a copy
+  List<List<int>> _toColumnFormat(im.Image imgSrc, int lineHeight) {
+    final im.Image image = im.Image.from(imgSrc); // make a copy
 
     // Determine new width: closest integer that is divisible by lineHeight
     final int widthPx = (image.width + lineHeight) - (image.width % lineHeight);
     final int heightPx = image.height;
 
     // Create a black bottom layer
-    final biggerImage = copyResize(image, width: widthPx, height: heightPx);
-    fill(biggerImage, 0);
+    final biggerImage = im.copyResize(image, width: widthPx, height: heightPx);
+    im.fill(biggerImage, color: im.ColorRgb8(0, 0, 0));
     // Insert source image into bigger one
-    drawImage(biggerImage, image, dstX: 0, dstY: 0);
+    im.compositeImage(biggerImage, image, dstX: 0, dstY: 0);
 
     int left = 0;
     final List<List<int>> blobs = [];
 
     while (left < widthPx) {
-      final Image slice = copyCrop(biggerImage, left, 0, lineHeight, heightPx);
-      final Uint8List bytes = slice.getBytes(format: Format.luminance);
+      final im.Image slice = im.copyCrop(biggerImage,
+          x: left, y: 0, width: lineHeight, height: heightPx);
+      final Uint8List bytes = slice.getBytes(order: im.ChannelOrder.grayAlpha);
       blobs.add(bytes);
       left += lineHeight;
     }
@@ -162,17 +163,17 @@ class Generator {
   }
 
   /// Image rasterization
-  List<int> _toRasterFormat(Image imgSrc) {
-    final Image image = Image.from(imgSrc); // make a copy
+  List<int> _toRasterFormat(im.Image imgSrc) {
+    final im.Image image = im.Image.from(imgSrc); // make a copy
     final int widthPx = image.width;
     final int heightPx = image.height;
 
-    grayscale(image);
-    invert(image);
+    im.grayscale(image);
+    im.invert(image);
 
     // R/G/B channels are same -> keep only one channel
     final List<int> oneChannelBytes = [];
-    final List<int> buffer = image.getBytes(format: Format.rgba);
+    final List<int> buffer = image.getBytes(order: im.ChannelOrder.rgba);
     for (int i = 0; i < buffer.length; i += 4) {
       oneChannelBytes.add(buffer[i]);
     }
@@ -565,21 +566,21 @@ class Generator {
   //   return bytes;
   // }
 
-  int _spltChineseCharacters(int maxCharactersNb, String text) {
-    // Split text into multiple lines if it too long
-    int counter = 0;
-    int splitPos = 0;
-    for (int p = 0; p < text.length; ++p) {
-      final int w = _isChinese(text[p]) ? 2 : 1;
-      if (counter + w >= maxCharactersNb) {
-        break;
-      }
-      counter += w;
-      splitPos += 1;
-    }
+  // int _spltChineseCharacters(int maxCharactersNb, String text) {
+  //   // Split text into multiple lines if it too long
+  //   int counter = 0;
+  //   int splitPos = 0;
+  //   for (int p = 0; p < text.length; ++p) {
+  //     final int w = _isChinese(text[p]) ? 2 : 1;
+  //     if (counter + w >= maxCharactersNb) {
+  //       break;
+  //     }
+  //     counter += w;
+  //     splitPos += 1;
+  //   }
 
-    return splitPos;
-  }
+  //   return splitPos;
+  // }
 
   /// Print a row.
   ///
@@ -709,19 +710,20 @@ class Generator {
   /// Print an image using (ESC *) command
   ///
   /// [image] is an instanse of class from [Image library](https://pub.dev/packages/image)
-  List<int> image(Image imgSrc, {PosAlign align = PosAlign.center}) {
+  List<int> image(im.Image imgSrc, {PosAlign align = PosAlign.center}) {
     List<int> bytes = [];
     // Image alignment
     bytes += setStyles(PosStyles().copyWith(align: align));
 
-    final Image image = Image.from(imgSrc); // make a copy
+    final im.Image image = im.Image.from(imgSrc); // make a copy
     const bool highDensityHorizontal = true;
     const bool highDensityVertical = true;
 
-    invert(image);
-    flip(image, Flip.horizontal);
-    final Image imageRotated = copyRotate(image, 270);
+    im.invert(image);
+    im.flip(image, direction: im.FlipDirection.horizontal);
+    final im.Image imageRotated = im.copyRotate(image, angle: 270);
 
+    // ignore: dead_code
     const int lineHeight = highDensityVertical ? 3 : 1;
     final List<List<int>> blobs = _toColumnFormat(imageRotated, lineHeight * 8);
 
@@ -735,6 +737,7 @@ class Generator {
 
     final int heightPx = imageRotated.height;
     const int densityByte =
+        // ignore: dead_code
         (highDensityHorizontal ? 1 : 0) + (highDensityVertical ? 32 : 0);
 
     final List<int> header = List.from(cBitImg.codeUnits);
@@ -757,7 +760,7 @@ class Generator {
   ///
   /// [image] is an instanse of class from [Image library](https://pub.dev/packages/image)
   List<int> imageRaster(
-    Image image, {
+    im.Image image, {
     PosAlign align = PosAlign.center,
     bool highDensityHorizontal = true,
     bool highDensityVertical = true,
