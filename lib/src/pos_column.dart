@@ -28,7 +28,6 @@ class PosColumn {
           'Only one parameter - text or textEncoded - should be passed');
     }
   }
-  Image? img;
   String text;
   Uint8List? textEncoded;
   bool containsChinese;

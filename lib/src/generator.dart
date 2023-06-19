@@ -9,7 +9,7 @@
 import 'dart:convert';
 import 'dart:typed_data' show Uint8List;
 import 'package:hex/hex.dart';
-import 'package:image/image.dart' as im;
+import 'package:image/image.dart';
 import 'package:gbk_codec/gbk_codec.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'commands.dart';
@@ -135,27 +135,26 @@ class Generator {
   ///
   /// [image] Image to extract from
   /// [lineHeight] Printed line height in dots
-  List<List<int>> _toColumnFormat(im.Image imgSrc, int lineHeight) {
-    final im.Image image = im.Image.from(imgSrc); // make a copy
+  List<List<int>> _toColumnFormat(Image imgSrc, int lineHeight) {
+    final Image image = Image.from(imgSrc); // make a copy
 
     // Determine new width: closest integer that is divisible by lineHeight
     final int widthPx = (image.width + lineHeight) - (image.width % lineHeight);
     final int heightPx = image.height;
 
     // Create a black bottom layer
-    final biggerImage = im.copyResize(image, width: widthPx, height: heightPx);
-    im.fill(biggerImage, color: im.ColorRgb8(0, 0, 0));
+    final biggerImage = copyResize(image, width: widthPx, height: heightPx);
+    fill(biggerImage, color: ColorRgb8(0, 0, 0));
     // Insert source image into bigger one
-    // im.compositeImage(biggerImage, image, dstX: 0, dstY: 0);
     drawImage(biggerImage, image, dstX: 0, dstY: 0);
 
     int left = 0;
     final List<List<int>> blobs = [];
 
     while (left < widthPx) {
-      final im.Image slice = im.copyCrop(biggerImage,
+      final Image slice = copyCrop(biggerImage,
           x: left, y: 0, width: lineHeight, height: heightPx);
-      im.grayscale(slice);
+      grayscale(slice);
       final imgBinary = slice.convert(numChannels: 1);
       final bytes = imgBinary.getBytes();
       blobs.add(bytes);
@@ -177,7 +176,7 @@ class Generator {
   /// The coordinates refer to the upper left corner. This function can be used to
   /// copy regions within the same image (if [dst] is the same as [src])
   /// but if the regions overlap the results will be unpredictable.
-  im.Image drawImage(im.Image dst, im.Image src,
+  Image drawImage(Image dst, Image src,
       {int? dstX,
       int? dstY,
       int? dstW,
@@ -202,7 +201,7 @@ class Generator {
           final stepX = (x * (srcW / dstW)).toInt();
           final stepY = (y * (srcH / dstH)).toInt();
           final srcPixel = src.getPixel(srcX + stepX, srcY + stepY);
-          im.drawPixel(dst, dstX + x, dstY + y, srcPixel);
+          drawPixel(dst, dstX + x, dstY + y, srcPixel);
         }
       }
     } else {
@@ -220,17 +219,17 @@ class Generator {
   }
 
   /// Image rasterization
-  List<int> _toRasterFormat(im.Image imgSrc) {
-    final im.Image image = im.Image.from(imgSrc); // make a copy
+  List<int> _toRasterFormat(Image imgSrc) {
+    final Image image = Image.from(imgSrc); // make a copy
     final int widthPx = image.width;
     final int heightPx = image.height;
 
-    im.grayscale(image);
-    im.invert(image);
+    grayscale(image);
+    invert(image);
 
     // R/G/B channels are same -> keep only one channel
     final List<int> oneChannelBytes = [];
-    final List<int> buffer = image.getBytes(order: im.ChannelOrder.rgba);
+    final List<int> buffer = image.getBytes(order: ChannelOrder.rgba);
     for (int i = 0; i < buffer.length; i += 4) {
       oneChannelBytes.add(buffer[i]);
     }
@@ -407,7 +406,6 @@ class Generator {
   }) {
     List<int> bytes = [];
     if (!containsChinese) {
-      bytes += setStyles(PosStyles().copyWith(align: styles.align));
       bytes += _text(
         _encode(text, isKanji: containsChinese),
         styles: styles,
@@ -517,124 +515,6 @@ class Generator {
   ///
   /// A row contains up to 12 columns. A column has a width between 1 and 12.
   /// Total width of columns in one row must be equal 12.
-  List<int> oldRow(List<PosColumn> cols) {
-    List<int> bytes = [];
-    final isSumValid = cols.fold(0, (int sum, col) => sum + col.width) == 12;
-    if (!isSumValid) {
-      throw Exception('Total columns width must be equal to 12');
-    }
-    bool isNextRow = false;
-    List<PosColumn> nextRow = <PosColumn>[];
-
-    for (int i = 0; i < cols.length; ++i) {
-      int colInd =
-          cols.sublist(0, i).fold(0, (int sum, col) => sum + col.width);
-      double charWidth = _getCharWidth(cols[i].styles);
-      double fromPos = _colIndToPosition(colInd);
-      final double toPos =
-          _colIndToPosition(colInd + cols[i].width) - spaceBetweenRows;
-      int maxCharactersNb = ((toPos - fromPos) / charWidth).floor();
-
-      if (!cols[i].containsChinese) {
-        // CASE 1: containsChinese = false
-        Uint8List encodedToPrint = cols[i].textEncoded != null
-            ? cols[i].textEncoded!
-            : _encode(cols[i].text);
-
-        // If the col's content is too long, split it to the next row
-        int realCharactersNb = encodedToPrint.length;
-        if (realCharactersNb > maxCharactersNb) {
-          // Print max possible and split to the next row
-          Uint8List encodedToPrintNextRow =
-              encodedToPrint.sublist(maxCharactersNb);
-          encodedToPrint = encodedToPrint.sublist(0, maxCharactersNb);
-          isNextRow = realCharactersNb < maxCharactersNb ? false : true;
-
-          if (isNextRow) {
-            nextRow.add(PosColumn(
-                text: String.fromCharCodes(encodedToPrintNextRow).trim(),
-                width: cols[i].width,
-                styles: cols[i].styles));
-          } else {
-            nextRow.add(PosColumn(
-                text: '', width: cols[i].width, styles: cols[i].styles));
-          }
-        } else {
-          // Insert an empty col
-          nextRow.add(PosColumn(
-            text: '',
-            width: cols[i].width,
-            styles: cols[i].styles,
-          ));
-        }
-        // end rows splitting
-        bytes += _text(
-          encodedToPrint,
-          styles: cols[i].styles,
-          colInd: colInd,
-          colWidth: cols[i].width,
-        );
-        // if (cols[i].img != null)
-        //   bytes += image(
-        //     cols[i].img!,
-        //   );
-      } else {
-        // CASE 1: containsChinese = true
-        // Split text into multiple lines if it too long
-        int counter = 0;
-        int splitPos = 0;
-        for (int p = 0; p < cols[i].text.length; ++p) {
-          final int w = _isChinese(cols[i].text[p]) ? 2 : 1;
-          if (counter + w >= maxCharactersNb) {
-            break;
-          }
-          counter += w;
-          splitPos += 1;
-        }
-        String toPrintNextRow = cols[i].text.substring(splitPos);
-        String toPrint = cols[i].text.substring(0, splitPos);
-
-        if (toPrintNextRow.isNotEmpty) {
-          isNextRow = true;
-          nextRow.add(PosColumn(
-              text: toPrintNextRow,
-              containsChinese: true,
-              width: cols[i].width,
-              styles: cols[i].styles));
-        } else {
-          // Insert an empty col
-          nextRow.add(PosColumn(
-              text: '', width: cols[i].width, styles: cols[i].styles));
-        }
-
-        // Print current row
-        final list = _getLexemes(toPrint);
-        final List<String> lexemes = list[0];
-        final List<bool> isLexemeChinese = list[1];
-
-        // Print each lexeme using codetable OR kanji
-        for (var j = 0; j < lexemes.length; ++j) {
-          bytes += _text(
-            _encode(lexemes[j], isKanji: isLexemeChinese[j]),
-            styles: cols[i].styles,
-            colInd: colInd,
-            colWidth: cols[i].width,
-            isKanji: isLexemeChinese[j],
-          );
-          // Define the absolute position only once (we print one line only)
-          // colInd = null;
-        }
-      }
-    }
-
-    bytes += emptyLines(1);
-
-    if (isNextRow) {
-      bytes += row(nextRow);
-    }
-    return bytes;
-  }
-
   List<int> row(List<PosColumn> cols) {
     List<int> bytes = [];
     final isSumValid = cols.fold(0, (int sum, col) => sum + col.width) == 12;
@@ -666,24 +546,15 @@ class Generator {
           Uint8List encodedToPrintNextRow =
               encodedToPrint.sublist(maxCharactersNb);
           encodedToPrint = encodedToPrint.sublist(0, maxCharactersNb);
-          isNextRow = realCharactersNb < maxCharactersNb ? false : true;
-
-          if (isNextRow) {
-            nextRow.add(PosColumn(
-                text: String.fromCharCodes(encodedToPrintNextRow).trim(),
-                width: cols[i].width,
-                styles: cols[i].styles));
-          } else {
-            nextRow.add(PosColumn(
-                text: '', width: cols[i].width, styles: cols[i].styles));
-          }
+          isNextRow = true;
+          nextRow.add(PosColumn(
+              textEncoded: encodedToPrintNextRow,
+              width: cols[i].width,
+              styles: cols[i].styles));
         } else {
           // Insert an empty col
           nextRow.add(PosColumn(
-            text: '',
-            width: cols[i].width,
-            styles: cols[i].styles,
-          ));
+              text: '', width: cols[i].width, styles: cols[i].styles));
         }
         // end rows splitting
         bytes += _text(
@@ -692,10 +563,6 @@ class Generator {
           colInd: colInd,
           colWidth: cols[i].width,
         );
-        // if (cols[i].img != null)
-        //   bytes += image(
-        //     cols[i].img!,
-        //   );
       } else {
         // CASE 1: containsChinese = true
         // Split text into multiple lines if it too long
@@ -756,20 +623,19 @@ class Generator {
   /// Print an image using (ESC *) command
   ///
   /// [image] is an instanse of class from [Image library](https://pub.dev/packages/image)
-  List<int> image(im.Image imgSrc, {PosAlign align = PosAlign.center}) {
+  List<int> image(Image imgSrc, {PosAlign align = PosAlign.center}) {
     List<int> bytes = [];
     // Image alignment
     bytes += setStyles(PosStyles().copyWith(align: align));
 
-    final im.Image image = im.Image.from(imgSrc); // make a copy
+    final Image image = Image.from(imgSrc); // make a copy
     const bool highDensityHorizontal = true;
     const bool highDensityVertical = true;
 
-    im.invert(image);
-    im.flip(image, direction: im.FlipDirection.horizontal);
-    final im.Image imageRotated = im.copyRotate(image, angle: 270);
+    invert(image);
+    flip(image, direction: FlipDirection.horizontal);
+    final Image imageRotated = copyRotate(image, angle: 270);
 
-    // ignore: dead_code
     const int lineHeight = highDensityVertical ? 3 : 1;
     final List<List<int>> blobs = _toColumnFormat(imageRotated, lineHeight * 8);
 
@@ -783,7 +649,6 @@ class Generator {
 
     final int heightPx = imageRotated.height;
     const int densityByte =
-        // ignore: dead_code
         (highDensityHorizontal ? 1 : 0) + (highDensityVertical ? 32 : 0);
 
     final List<int> header = List.from(cBitImg.codeUnits);
@@ -806,7 +671,7 @@ class Generator {
   ///
   /// [image] is an instanse of class from [Image library](https://pub.dev/packages/image)
   List<int> imageRaster(
-    im.Image image, {
+    Image image, {
     PosAlign align = PosAlign.center,
     bool highDensityHorizontal = true,
     bool highDensityVertical = true,
@@ -961,7 +826,6 @@ class Generator {
   }) {
     List<int> bytes = [];
     if (colInd != null) {
-      bytes += setStyles(PosStyles().copyWith(align: styles.align));
       double charWidth =
           _getCharWidth(styles, maxCharsPerLine: maxCharsPerLine);
       double fromPos = _colIndToPosition(colInd);
