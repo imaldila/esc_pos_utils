@@ -517,6 +517,124 @@ class Generator {
   ///
   /// A row contains up to 12 columns. A column has a width between 1 and 12.
   /// Total width of columns in one row must be equal 12.
+  List<int> oldRow(List<PosColumn> cols) {
+    List<int> bytes = [];
+    final isSumValid = cols.fold(0, (int sum, col) => sum + col.width) == 12;
+    if (!isSumValid) {
+      throw Exception('Total columns width must be equal to 12');
+    }
+    bool isNextRow = false;
+    List<PosColumn> nextRow = <PosColumn>[];
+
+    for (int i = 0; i < cols.length; ++i) {
+      int colInd =
+          cols.sublist(0, i).fold(0, (int sum, col) => sum + col.width);
+      double charWidth = _getCharWidth(cols[i].styles);
+      double fromPos = _colIndToPosition(colInd);
+      final double toPos =
+          _colIndToPosition(colInd + cols[i].width) - spaceBetweenRows;
+      int maxCharactersNb = ((toPos - fromPos) / charWidth).floor();
+
+      if (!cols[i].containsChinese) {
+        // CASE 1: containsChinese = false
+        Uint8List encodedToPrint = cols[i].textEncoded != null
+            ? cols[i].textEncoded!
+            : _encode(cols[i].text);
+
+        // If the col's content is too long, split it to the next row
+        int realCharactersNb = encodedToPrint.length;
+        if (realCharactersNb > maxCharactersNb) {
+          // Print max possible and split to the next row
+          Uint8List encodedToPrintNextRow =
+              encodedToPrint.sublist(maxCharactersNb);
+          encodedToPrint = encodedToPrint.sublist(0, maxCharactersNb);
+          isNextRow = realCharactersNb < maxCharactersNb ? false : true;
+
+          if (isNextRow) {
+            nextRow.add(PosColumn(
+                text: String.fromCharCodes(encodedToPrintNextRow).trim(),
+                width: cols[i].width,
+                styles: cols[i].styles));
+          } else {
+            nextRow.add(PosColumn(
+                text: '', width: cols[i].width, styles: cols[i].styles));
+          }
+        } else {
+          // Insert an empty col
+          nextRow.add(PosColumn(
+            text: '',
+            width: cols[i].width,
+            styles: cols[i].styles,
+          ));
+        }
+        // end rows splitting
+        bytes += _text(
+          encodedToPrint,
+          styles: cols[i].styles,
+          colInd: colInd,
+          colWidth: cols[i].width,
+        );
+        // if (cols[i].img != null)
+        //   bytes += image(
+        //     cols[i].img!,
+        //   );
+      } else {
+        // CASE 1: containsChinese = true
+        // Split text into multiple lines if it too long
+        int counter = 0;
+        int splitPos = 0;
+        for (int p = 0; p < cols[i].text.length; ++p) {
+          final int w = _isChinese(cols[i].text[p]) ? 2 : 1;
+          if (counter + w >= maxCharactersNb) {
+            break;
+          }
+          counter += w;
+          splitPos += 1;
+        }
+        String toPrintNextRow = cols[i].text.substring(splitPos);
+        String toPrint = cols[i].text.substring(0, splitPos);
+
+        if (toPrintNextRow.isNotEmpty) {
+          isNextRow = true;
+          nextRow.add(PosColumn(
+              text: toPrintNextRow,
+              containsChinese: true,
+              width: cols[i].width,
+              styles: cols[i].styles));
+        } else {
+          // Insert an empty col
+          nextRow.add(PosColumn(
+              text: '', width: cols[i].width, styles: cols[i].styles));
+        }
+
+        // Print current row
+        final list = _getLexemes(toPrint);
+        final List<String> lexemes = list[0];
+        final List<bool> isLexemeChinese = list[1];
+
+        // Print each lexeme using codetable OR kanji
+        for (var j = 0; j < lexemes.length; ++j) {
+          bytes += _text(
+            _encode(lexemes[j], isKanji: isLexemeChinese[j]),
+            styles: cols[i].styles,
+            colInd: colInd,
+            colWidth: cols[i].width,
+            isKanji: isLexemeChinese[j],
+          );
+          // Define the absolute position only once (we print one line only)
+          // colInd = null;
+        }
+      }
+    }
+
+    bytes += emptyLines(1);
+
+    if (isNextRow) {
+      bytes += row(nextRow);
+    }
+    return bytes;
+  }
+
   List<int> row(List<PosColumn> cols) {
     List<int> bytes = [];
     final isSumValid = cols.fold(0, (int sum, col) => sum + col.width) == 12;
