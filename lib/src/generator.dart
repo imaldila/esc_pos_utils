@@ -405,6 +405,8 @@ class Generator {
     int? maxCharsPerLine,
   }) {
     List<int> bytes = [];
+    bytes += setStyles(PosStyles().copyWith(align: styles.align));
+
     if (!containsChinese) {
       bytes += _text(
         _encode(text, isKanji: containsChinese),
