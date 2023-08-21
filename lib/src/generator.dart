@@ -405,9 +405,10 @@ class Generator {
     int? maxCharsPerLine,
   }) {
     List<int> bytes = [];
-    bytes += setStyles(PosStyles().copyWith(align: styles.align));
 
     if (!containsChinese) {
+      bytes += setStyles(PosStyles().copyWith(align: styles.align));
+
       bytes += _text(
         _encode(text, isKanji: containsChinese),
         styles: styles,
@@ -448,7 +449,7 @@ class Generator {
 
   /// Cut the paper
   ///
-  /// [mode] is used to define the full or partial cut (if supported by the printer)
+  /// [mode] is used to define the full or partial cut (if supported by the priner)
   List<int> cut({PosCutMode mode = PosCutMode.full}) {
     List<int> bytes = [];
     bytes += emptyLines(5);
@@ -504,7 +505,7 @@ class Generator {
     return bytes;
   }
 
-  /// Reverse feed for [n] lines (if supported by the printer)
+  /// Reverse feed for [n] lines (if supported by the priner)
   List<int> reverseFeed(int n) {
     List<int> bytes = [];
     bytes += Uint8List.fromList(
@@ -519,6 +520,7 @@ class Generator {
   /// Total width of columns in one row must be equal 12.
   List<int> row(List<PosColumn> cols) {
     List<int> bytes = [];
+
     final isSumValid = cols.fold(0, (int sum, col) => sum + col.width) == 12;
     if (!isSumValid) {
       throw Exception('Total columns width must be equal to 12');
@@ -807,7 +809,7 @@ class Generator {
     int? maxCharsPerLine,
   }) {
     List<int> bytes = [];
-    bytes += _text(textBytes, styles: styles, maxCharsPerLine: maxCharsPerLine);
+    // bytes += _text(textBytes, styles: styles, maxCharsPerLine: maxCharsPerLine);
     // Ensure at least one line break after the text
     bytes += emptyLines(linesAfter + 1);
     return bytes;
@@ -828,7 +830,6 @@ class Generator {
   }) {
     List<int> bytes = [];
     bytes += setStyles(PosStyles().copyWith(align: styles.align));
-
     if (colInd != null) {
       double charWidth =
           _getCharWidth(styles, maxCharsPerLine: maxCharsPerLine);
