@@ -448,7 +448,7 @@ class Generator {
 
   /// Cut the paper
   ///
-  /// [mode] is used to define the full or partial cut (if supported by the priner)
+  /// [mode] is used to define the full or partial cut (if supported by the printer)
   List<int> cut({PosCutMode mode = PosCutMode.full}) {
     List<int> bytes = [];
     bytes += emptyLines(5);
@@ -504,7 +504,7 @@ class Generator {
     return bytes;
   }
 
-  /// Reverse feed for [n] lines (if supported by the priner)
+  /// Reverse feed for [n] lines (if supported by the printer)
   List<int> reverseFeed(int n) {
     List<int> bytes = [];
     bytes += Uint8List.fromList(
@@ -827,6 +827,8 @@ class Generator {
     int? maxCharsPerLine,
   }) {
     List<int> bytes = [];
+    bytes += setStyles(PosStyles().copyWith(align: styles.align));
+
     if (colInd != null) {
       double charWidth =
           _getCharWidth(styles, maxCharsPerLine: maxCharsPerLine);
