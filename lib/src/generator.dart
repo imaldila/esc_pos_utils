@@ -32,6 +32,8 @@ class Generator {
   int _getMaxCharsPerLine(PosFontType? font) {
     if (_paperSize == PaperSize.mm58) {
       return (font == null || font == PosFontType.fontA) ? 32 : 42;
+    } else if (_paperSize == PaperSize.mm72) {
+      return (font == null || font == PosFontType.fontA) ? 42 : 42;
     } else {
       return (font == null || font == PosFontType.fontA) ? 48 : 64;
     }
@@ -809,7 +811,8 @@ class Generator {
     int? maxCharsPerLine,
   }) {
     List<int> bytes = [];
-    // bytes += _text(textBytes, styles: styles, maxCharsPerLine: maxCharsPerLine);
+    bytes += _text(textBytes, styles: styles, maxCharsPerLine: maxCharsPerLine);
+
     // Ensure at least one line break after the text
     bytes += emptyLines(linesAfter + 1);
     return bytes;

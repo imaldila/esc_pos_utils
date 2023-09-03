@@ -7,7 +7,6 @@
  */
 
 import 'dart:typed_data' show Uint8List;
-import 'package:image/image.dart';
 import 'pos_styles.dart';
 
 /// Column contains text, styles and width (an integer in 1..12 range)
